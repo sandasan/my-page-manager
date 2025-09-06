@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Усовершенствованный Локальный Менеджер Страниц</title>
+    <!-- PWA (Progressive Web App) manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="https://placehold.co/192x192/0063f1/ffffff?text=LM" sizes="192x192">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Page Manager">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/0063f1/ffffff?text=LM">
+    <!-- End PWA -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Style for tags */
+        .tag {
+            background-color: #e2e8f0;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
+        }
+        .tag:hover {
+            background-color: #cbd5e0;
+        }
+        .dark .tag {
+            background-color: #2d3748;
+            color: #e2e8f0;
+        }
+        .dark .tag:hover {
+            background-color: #4a5568;
+        }
+        /* Table styles */
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+        .custom-table th, .custom-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: left;
+        }
+        .dark .custom-table th, .dark .custom-table td {
+            border-color: #4a5568;
+        }
+        .custom-table th {
+            background-color: #f7fafc;
+        }
+        .dark .custom-table th {
+            background-color: #2d3748;
+        }
+        [contenteditable]:focus {
+            outline: none;
+            ring: 2px solid #63b3ed;
+        }
+        .tree-container svg {
+            background-color: #f7fafc;
+            border-radius: 0.5rem;
+        }
+        .dark .tree-container svg {
+            background-color: #1a202c;
+        }
+        .tree-node-editor {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .tree-node-editor input {
+            flex-grow: 1;
+            background-color: transparent;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col min-h-screen">
+    <div id="app" class="flex flex-col flex-grow w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-2 flex-grow">
+                <button id="backButton" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
+                <h1 id="pageTitle" class="text-2xl font-bold flex-grow text-center sm:text-left truncate">Загрузка...</h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button id="searchButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Поиск</button>
+                <button id="createPageButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Создать</button>
+                <button id="localExportButton" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200">Экспорт (Локально)</button>
+                <button id="localImportButton" class="px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600 transition-colors duration-200">Импорт (Локально)</button>
+                <button id="exportToDriveButton" class="px-4 py-2 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 transition-colors duration-200">Сохранить на Google Диск</button>
+                <button id="importFromDriveButton" class="px-4 py-2 bg-purple-500 text-white rounded-lg shadow-md hover:bg-purple-600 transition-colors duration-200">Загрузить с Google Диска</button>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="flex-grow bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-6">
+            <div id="blocksContainer" class="space-y-6">
+                <!-- Content blocks will be dynamically added here -->
+            </div>
+            <div class="flex flex-wrap gap-2 mt-6 justify-center">
+                <button id="addTextBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить текст</button>
+                <button id="addTableBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить таблицу</button>
+                <button id="addGraphBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить график</button>
+                <button id="addTreeBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить дерево</button>
+            </div>
+            <div id="tagContainer" class="flex flex-wrap gap-2 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <input type="text" id="tagInput" class="flex-grow bg-gray-100 dark:bg-gray-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600" placeholder="Добавить тег и нажать Enter">
+            </div>
+        </main>
+
+        <!-- Subpages list -->
+        <div id="subpagesContainer" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-3">Подстраницы</h2>
+            <ul id="subpagesList" class="flex flex-col gap-2"></ul>
+        </div>
+    </div>
+    
+    <!-- Hidden file input for import -->
+    <input type="file" id="fileInput" accept=".json" class="hidden">
+
+    <!-- Modals -->
+    <div id="modalContainer" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div id="modal" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl transform transition-transform scale-95 duration-200">
+            <div id="modalContent"></div>
+            <div id="modalButtons" class="mt-4 flex justify-end gap-2"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let pages = {};
+        let currentPageId = 'root';
+        let isSaving = false;
+        let chartInstances = {};
+        let currentEditingBlockId = null;
+        let currentTreeData = {};
+        
+        // Модальное окно для сообщений
+        const modalContainerEl = document.getElementById('modalContainer');
+        const modalContentEl = document.getElementById('modalContent');
+        const modalButtonsEl = document.getElementById('modalButtons');
+
+        // DOM Elements
+        const pageTitleEl = document.getElementById('pageTitle');
+        const blocksContainerEl = document.getElementById('blocksContainer');
+        const subpagesListEl = document.getElementById('subpagesList');
+        const backButtonEl = document.getElementById('backButton');
+        const createPageButtonEl = document.getElementById('createPageButton');
+        const localExportButtonEl = document.getElementById('localExportButton');
+        const localImportButtonEl = document.getElementById('localImportButton');
+        const exportToDriveButtonEl = document.getElementById('exportToDriveButton');
+        const importFromDriveButtonEl = document.getElementById('importFromDriveButton');
+        const fileInputEl = document.getElementById('fileInput');
+        const tagInputEl = document.getElementById('tagInput');
+        const tagContainerEl = document.getElementById('tagContainer');
+        const searchButtonEl = document.getElementById('searchButton');
+        const searchModalEl = document.getElementById('searchModal');
+        const closeSearchModalButtonEl = document.getElementById('closeSearchModalButton');
+        const searchInputEl = document.getElementById('searchInput');
+        const searchResultsListEl = document.getElementById('searchResultsList');
+        const saveSearchResultsButtonEl = document.getElementById('saveSearchResultsButton');
+        const addTextBlockButtonEl = document.getElementById('addTextBlockButton');
+        const addTableBlockButtonEl = document.getElementById('addTableBlockButton');
+        const addGraphBlockButtonEl = document.getElementById('addGraphBlockButton');
+        const addTreeBlockButtonEl = document.getElementById('addTreeBlockButton');
+        const tableEditorModalEl = document.getElementById('tableEditorModal');
+        const tableEditorContainerEl = document.getElementById('tableEditorContainer');
+        const addTableRowButtonEl = document.getElementById('addTableRowButton');
+        const addTableColButtonEl = document.getElementById('addTableColButton');
+        const saveTableButtonEl = document.getElementById('saveTableButton');
+        const graphEditorModalEl = document.getElementById('graphEditorModal');
+        const graphTypeSelectEl = document.getElementById('graphTypeSelect');
+        const graphLabelsInputEl = document.getElementById('graphLabelsInput');
+        const graphValuesInputEl = document.getElementById('graphValuesInput');
+        const saveGraphButtonEl = document.getElementById('saveGraphButton');
+        const treeEditorModalEl = document.getElementById('treeEditorModal');
+        const treeTitleInputEl = document.getElementById('treeTitleInput');
+        const treeEditorContainerEl = document.getElementById('treeEditorContainer');
+        const saveTreeButtonEl = document.getElementById('saveTreeButton');
+        
+        // Helper function for showing custom modal
+        function showModal(content, buttons) {
+            modalContentEl.innerHTML = content;
+            modalButtonsEl.innerHTML = '';
+            buttons.forEach(btn => {
+                const buttonEl = document.createElement('button');
+                buttonEl.textContent = btn.text;
+                buttonEl.className = 'px-4 py-2 rounded-lg transition-colors duration-200';
+                buttonEl.classList.add(btn.className || 'bg-blue-500', 'text-white', 'hover:bg-blue-600');
+                buttonEl.onclick = btn.handler;
+                modalButtonsEl.appendChild(buttonEl);
+            });
+            modalContainerEl.classList.remove('hidden');
+        }
+
+        // Helper function for closing the custom modal
+        function closeModal() {
+            modalContainerEl.classList.add('hidden');
+        }
+
+        // Initialization
+        function initializeApp() {
+            try {
+                const storedData = localStorage.getItem('pagesData');
+                if (storedData) {
+                    pages = JSON.parse(storedData);
+                    if (!pages['root']) {
+                        createRootPage();
+                    }
+                } else {
+                    createRootPage();
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке данных из localStorage:', error);
+                createRootPage();
+            }
+            renderPage(currentPageId);
+            // Register Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker зарегистрирован!', reg))
+                    .catch(err => console.error('Ошибка регистрации Service Worker:', err));
+            }
+        }
+
+        function createRootPage() {
+            pages = {
+                'root': {
+                    id: 'root',
+                    title: 'Главная страница',
+                    blocks: [{
+                        type: 'text',
+                        id: crypto.randomUUID(),
+                        content: 'Добро пожаловать! Используйте кнопки ниже, чтобы добавить контент.'
+                    }],
+                    tags: [],
+                    parentId: null,
+                    childrenIds: []
+                }
+            };
+            saveData();
+        }
+
+        function saveData() {
+            localStorage.setItem('pagesData', JSON.stringify(pages));
+        }
+
+        // Tag functionality
+        function addTag(tagName) {
+            const page = pages[currentPageId];
+            if (page && !page.tags.includes(tagName)) {
+                page.tags.push(tagName);
+                saveData();
+                renderTags();
+            }
+        }
+
+        function removeTag(tagName) {
+            const page = pages[currentPageId];
+            if (page) {
+                page.tags = page.tags.filter(tag => tag !== tagName);
+                saveData();
+                renderTags();
+            }
+        }
+
+        function renderTags() {
+            const page = pages[currentPageId];
+            if (!page) return;
+            
+            const existingTags = tagContainerEl.querySelectorAll('.tag');
+            existingTags.forEach(tagEl => tagEl.remove());
+
+            page.tags.forEach(tag => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'tag';
+                tagEl.textContent = tag;
+                tagEl.addEventListener('click', () => {
+                    removeTag(tag);
+                });
+                tagContainerEl.insertBefore(tagEl, tagInputEl);
+            });
+        }
+
+        // Render functions for different block types
+        function renderTextBlock(block, index) {
+            const blockEl = document.createElement('div');
+            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg flex flex-col gap-2 relative group';
+            blockEl.innerHTML = `
+                <div contenteditable="true" class="page-content outline-none ring-2 ring-transparent focus:ring-blue-400 dark:focus:ring-blue-600 transition-shadow duration-200 p-2 rounded-lg cursor-text" data-block-id="${block.id}"></div>
+                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                    </svg>
+                </button>
+            `;
+            const contentEl = blockEl.querySelector('.page-content');
+            contentEl.textContent = block.content;
+            contentEl.addEventListener('input', () => {
+                block.content = contentEl.textContent;
+                saveData();
+            });
+            blockEl.querySelector('.delete-block-button').addEventListener('click', () => deleteBlock(block.id));
+            blocksContainerEl.appendChild(blockEl);
+        }
+
+        function renderTableBlock(block, index) {
+            const blockEl = document.createElement('div');
+            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg flex flex-col gap-2 relative group';
+            blockEl.innerHTML = `
+                <table class="custom-table" data-block-id="${block.id}"></table>
+                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
+                    </svg>
+                </button>
+                <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                    </svg>
+                </button>
+            `;
+            const tableEl = blockEl.querySelector('table');
+            block.data.forEach(rowData => {
+                const tr = document.createElement('tr');
+                rowData.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.textContent = cellData;
+                    tr.appendChild(td);
+                });
+                tableEl.appendChild(tr);
+            });
+            blockEl.querySelector('.edit-block-button').addEventListener('click', () => openTableEditor(block.id));
+            blockEl.querySelector('.delete-block-button').addEventListener('click', () => deleteBlock(block.id));
+            blocksContainerEl.appendChild(blockEl);
+        }
+
+        function renderGraphBlock(block, index) {
+            const blockEl = document.createElement('div');
+            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg relative group';
+            blockEl.innerHTML = `
+                <canvas data-block-id="${block.id}" class="w-full h-64"></canvas>
+                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
+                    </svg>
+                </button>
+                 <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                    </svg>
+                </button>
+            `;
+            const canvasEl = blockEl.querySelector('canvas');
+            blockEl.querySelector('.edit-block-button').addEventListener('click', () => openGraphEditor(block.id));
+            blockEl.querySelector('.delete-block-button').addEventListener('click', () => deleteBlock(block.id));
+            blocksContainerEl.appendChild(blockEl);
+
+            // Destroy previous chart instance if it exists
+            if (chartInstances[block.id]) {
+                chartInstances[block.id].destroy();
+            }
+
+            // Create new chart
+            const ctx = canvasEl.getContext('2d');
+            chartInstances[block.id] = new Chart(ctx, {
+                type: block.data.type,
+                data: block.data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                }
+            });
+        }
+
+        function renderTreeBlock(block, index) {
+            const blockEl = document.createElement('div');
+            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg flex flex-col gap-2 relative group tree-container';
+            blockEl.innerHTML = `
+                <h4 class="font-bold text-lg mb-2">${block.title}</h4>
+                <div class="tree-content w-full overflow-x-auto" data-block-id="${block.id}"></div>
+                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
+                    </svg>
+                </button>
+                <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                    </svg>
+                </button>
+            `;
+            const treeContentEl = blockEl.querySelector('.tree-content');
+            blockEl.querySelector('.edit-block-button').addEventListener('click', () => openTreeEditor(block.id));
+            blockEl.querySelector('.delete-block-button').addEventListener('click', () => deleteBlock(block.id));
+            blocksContainerEl.appendChild(blockEl);
+
+            try {
+                const data = JSON.parse(block.data);
+                drawTree(treeContentEl, data);
+            } catch (e) {
+                treeContentEl.innerHTML = `<div class="text-red-500">Ошибка: Неверный формат JSON для дерева.</div>`;
+            }
+        }
+        
+        function drawTree(container, data) {
+            const width = container.offsetWidth;
+            const height = 400;
+
+            container.innerHTML = '';
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .append("g")
+                .attr("transform", `translate(40,${height/2})`);
+
+            const treeLayout = d3.tree().size([height - 80, width - 160]);
+            const root = d3.hierarchy(data);
+            const nodes = treeLayout(root).descendants();
+            const links = root.links();
+            
+            // Nodes
+            const node = svg.selectAll(".node")
+                .data(nodes)
+                .join("g")
+                .attr("class", d => `node ${d.children ? "node--internal" : "node--leaf"}`)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            node.append("circle")
+                .attr("r", 10)
+                .attr("fill", "#63b3ed")
+                .attr("stroke", "#2b6cb0")
+                .attr("stroke-width", 2);
+
+            node.append("text")
+                .attr("dy", "0.31em")
+                .attr("x", d => d.children ? -15 : 15)
+                .attr("text-anchor", d => d.children ? "end" : "start")
+                .text(d => d.data.name)
+                .attr("fill", getComputedStyle(document.body).color);
+
+            // Links
+            const link = svg.selectAll(".link")
+                .data(links)
+                .join("path")
+                .attr("class", "link")
+                .attr("fill", "none")
+                .attr("stroke", "#94a3b8")
+                .attr("stroke-width", 2)
+                .attr("d", d3.linkHorizontal()
+                    .x(d => d.y)
+                    .y(d => d.x));
+        }
+
+        // Render a single page
+        function renderPage(pageId) {
+            const page = pages[pageId];
+            if (!page) {
+                console.error(`Страница с ID ${pageId} не найдена.`);
+                return;
+            }
+
+            // Clean up old charts
+            Object.values(chartInstances).forEach(chart => chart.destroy());
+            chartInstances = {};
+
+            currentPageId = pageId;
+
+            pageTitleEl.textContent = page.title;
+            blocksContainerEl.innerHTML = '';
+            
+            // Render blocks
+            page.blocks.forEach((block, index) => {
+                block.id = block.id || crypto.randomUUID(); // Ensure blocks have IDs
+                if (block.type === 'text') {
+                    renderTextBlock(block, index);
+                } else if (block.type === 'table') {
+                    renderTableBlock(block, index);
+                } else if (block.type === 'graph') {
+                    renderGraphBlock(block, index);
+                } else if (block.type === 'tree') {
+                    renderTreeBlock(block, index);
+                }
+            });
+            
+            renderTags();
+
+            backButtonEl.disabled = (page.parentId === null);
+            backButtonEl.onclick = () => {
+                if (page.parentId) {
+                    renderPage(page.parentId);
+                }
+            };
+
+            subpagesListEl.innerHTML = '';
+            if (page.childrenIds && page.childrenIds.length > 0) {
+                page.childrenIds.forEach(childId => {
+                    const childPage = pages[childId];
+                    if (childPage) {
+                        const li = document.createElement('li');
+                        li.className = 'group flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded-lg transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer';
+                        
+                        const titleContainer = document.createElement('div');
+                        titleContainer.className = 'flex items-center gap-2 flex-grow';
+                        const icon = document.createElement('span');
+                        icon.className = 'text-gray-500 dark:text-gray-400';
+                        icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path d="M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM1.5 10.146A.75.75 0 002.25 9h19.5a.75.75 0 00.75-.75V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v2.396z" />
+                        </svg>`;
+                        const titleEl = document.createElement('span');
+                        titleEl.className = 'font-medium truncate';
+                        titleEl.textContent = childPage.title;
+                        
+                        const tagsContainer = document.createElement('div');
+                        tagsContainer.className = 'flex gap-1 flex-wrap';
+                        if (childPage.tags && childPage.tags.length > 0) {
+                            childPage.tags.forEach(tag => {
+                                const tagEl = document.createElement('span');
+                                tagEl.className = 'tag text-xs';
+                                tagEl.textContent = tag;
+                                tagsContainer.appendChild(tagEl);
+                            });
+                        }
+
+                        titleContainer.append(icon, titleEl, tagsContainer);
+                        
+                        const deleteButton = document.createElement('button');
+                        deleteButton.className = 'p-1 text-red-500 hover:text-red-700 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100';
+                        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
+                        </svg>`;
+
+                        deleteButton.onclick = (e) => {
+                            e.stopPropagation();
+                            showModal(
+                                `<p>Вы уверены, что хотите удалить страницу "${childPage.title}" и все ее подстраницы?</p>`,
+                                [
+                                    { text: "Отмена", className: "bg-gray-500 hover:bg-gray-600", handler: closeModal },
+                                    { text: "Удалить", className: "bg-red-500 hover:bg-red-600", handler: () => {
+                                        deletePage(childId);
+                                        closeModal();
+                                    }}
+                                ]
+                            );
+                        };
+                        
+                        li.append(titleContainer, deleteButton);
+                        li.onclick = () => renderPage(childId);
+                        subpagesListEl.appendChild(li);
+                    }
+                });
+            } else {
+                const li = document.createElement('li');
+                li.className = 'text-center text-gray-500 dark:text-gray-400 p-4';
+                li.textContent = 'Нет подстраниц. Нажмите "Создать", чтобы добавить.';
+                subpagesListEl.appendChild(li);
+            }
+        }
+        
+        // Delete a page
+        function deletePage(pageId) {
+            if (!pages[pageId]) return;
+
+            if (pages[pageId].childrenIds && pages[pageId].childrenIds.length > 0) {
+                pages[pageId].childrenIds.forEach(childId => deletePage(childId));
+            }
+
+            const parentId = pages[pageId].parentId;
+            if (parentId && pages[parentId] && pages[parentId].childrenIds) {
+                pages[parentId].childrenIds = pages[parentId].childrenIds.filter(id => id !== pageId);
+            }
+            
+            delete pages[pageId];
+            saveData();
+            
+            if (pageId === currentPageId) {
+                renderPage(parentId || 'root');
+            } else {
+                renderPage(currentPageId);
+            }
+        }
+
+        // Delete a block
+        function deleteBlock(blockId) {
+            const page = pages[currentPageId];
+            if (page) {
+                showModal(
+                    `<p>Вы уверены, что хотите удалить этот блок?</p>`,
+                    [
+                        { text: "Отмена", className: "bg-gray-500 hover:bg-gray-600", handler: closeModal },
+                        { text: "Удалить", className: "bg-red-500 hover:bg-red-600", handler: () => {
+                            page.blocks = page.blocks.filter(b => b.id !== blockId);
+                            saveData();
+                            renderPage(currentPageId);
+                            closeModal();
+                        }}
+                    ]
+                );
+            }
+        }
+
+        // Search logic
+        function searchPages(query) {
+            const lowerCaseQuery = query.toLowerCase().trim();
+            if (!lowerCaseQuery) return [];
+
+            const tagRegex = /#(\S+)/g;
+            const textParts = lowerCaseQuery.replace(tagRegex, '').trim().split(/\s+/).filter(Boolean);
+            const tags = Array.from(lowerCaseQuery.matchAll(tagRegex)).map(match => match[1]);
+
+            return Object.values(pages).filter(page => {
+                if (page.id === 'root') return false;
+
+                let matchesText = true;
+                if (textParts.length > 0) {
+                    matchesText = textParts.some(part => 
+                        page.title.toLowerCase().includes(part) || 
+                        (page.blocks && page.blocks.some(b => 
+                            (b.type === 'text' && b.content.toLowerCase().includes(part)) ||
+                            (b.type === 'table' && b.data.some(row => row.some(cell => String(cell).toLowerCase().includes(part)))) ||
+                            (b.type === 'tree' && b.title.toLowerCase().includes(part))
+                        ))
+                    );
+                }
+
+                let matchesTags = true;
+                if (tags.length > 0) {
+                    matchesTags = tags.every(tag => page.tags && page.tags.some(pageTag => pageTag.toLowerCase().includes(tag)));
+                }
+
+                return matchesText && matchesTags;
+            });
+        }
+
+        function renderSearchResults(results) {
+            searchResultsListEl.innerHTML = '';
+            if (results.length > 0) {
+                results.forEach(page => {
+                    const li = document.createElement('li');
+                    li.className = 'flex flex-col p-3 bg-gray-100 dark:bg-gray-700 rounded-lg transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer';
+                    const textBlocks = page.blocks.filter(b => b.type === 'text').map(b => b.content).join(' ');
+                    li.innerHTML = `
+                        <h4 class="font-bold">${page.title}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 truncate">${textBlocks ? textBlocks.slice(0, 100) : ''}...</p>
+                        <div class="flex flex-wrap gap-1 mt-2">${page.tags.map(tag => `<span class="tag text-xs">${tag}</span>`).join('')}</div>
+                    `;
+                    li.onclick = () => {
+                        renderPage(page.id);
+                        modalContainerEl.classList.add('hidden'); // Close search modal
+                    };
+                    searchResultsListEl.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.className = 'text-center text-gray-500 dark:text-gray-400 p-4';
+                li.textContent = 'Ничего не найдено.';
+                searchResultsListEl.appendChild(li);
+            }
+        }
+
+        // Table editor functions
+        function openTableEditor(blockId) {
+            currentEditingBlockId = blockId;
+            const block = pages[currentPageId].blocks.find(b => b.id === blockId);
+            const data = block.data || [["", "", ""], ["", "", ""]]; // Default 2x3 table
+            
+            renderTableEditor(data);
+            tableEditorModalEl.classList.remove('hidden');
+        }
+
+        function renderTableEditor(data) {
+            tableEditorContainerEl.innerHTML = '';
+            const table = document.createElement('table');
+            table.className = "w-full border-collapse text-sm";
+            data.forEach((rowData, rowIndex) => {
+                const tr = document.createElement('tr');
+                rowData.forEach((cellData, colIndex) => {
+                    const td = document.createElement('td');
+                    td.className = "border border-gray-300 dark:border-gray-600 p-2";
+                    const input = document.createElement('input');
+                    input.type = "text";
+                    input.value = cellData;
+                    input.className = "w-full bg-transparent focus:outline-none";
+                    input.addEventListener('input', (e) => data[rowIndex][colIndex] = e.target.value);
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+            tableEditorContainerEl.appendChild(table);
+        }
+
+        // Graph editor functions
+        function openGraphEditor(blockId) {
+            currentEditingBlockId = blockId;
+            const block = pages[currentPageId].blocks.find(b => b.id === blockId);
+            if (block.data) {
+                graphTypeSelectEl.value = block.data.type || 'bar';
+                graphLabelsInputEl.value = block.data.labels.join(', ');
+                graphValuesInputEl.value = block.data.datasets[0].data.join(', ');
+            } else {
+                graphTypeSelectEl.value = 'bar';
+                graphLabelsInputEl.value = '';
+                graphValuesInputEl.value = '';
+            }
+            graphEditorModalEl.classList.add('hidden');
+        }
+
+        // Tree editor functions
+        function openTreeEditor(blockId) {
+            currentEditingBlockId = blockId;
+            const block = pages[currentPageId].blocks.find(b => b.id === blockId);
+            treeTitleInputEl.value = block.title || '';
+            try {
+                currentTreeData = JSON.parse(block.data);
+            } catch (e) {
+                console.error("Failed to parse tree data:", e);
+                currentTreeData = { name: "Корень", children: [] };
+            }
+            drawEditableTree();
+            treeEditorModalEl.classList.remove('hidden');
+        }
+
+        function drawEditableTree() {
+            const container = treeEditorContainerEl;
+            const data = currentTreeData;
+            const width = container.offsetWidth;
+            const height = 400;
+
+            container.innerHTML = '';
+            const svg = d3.select(container).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", `0 0 ${width} ${height}`)
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .append("g")
+                .attr("transform", `translate(40,${height/2})`);
+
+            const treeLayout = d3.tree().size([height - 80, width - 160]);
+            const root = d3.hierarchy(data);
+            const nodes = treeLayout(root).descendants();
+            const links = root.links();
+            
+            // Links
+            const link = svg.selectAll(".link")
+                .data(links)
+                .join("path")
+                .attr("class", "link")
+                .attr("fill", "none")
+                .attr("stroke", "#94a3b8")
+                .attr("stroke-width", 2)
+                .attr("d", d3.linkHorizontal()
+                    .x(d => d.y)
+                    .y(d => d.x));
+
+            // Nodes
+            const node = svg.selectAll(".node")
+                .data(nodes)
+                .join("g")
+                .attr("class", d => `node ${d.children ? "node--internal" : "node--leaf"}`)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            node.append("circle")
+                .attr("r", 10)
+                .attr("fill", "#63b3ed")
+                .attr("stroke", "#2b6cb0")
+                .attr("stroke-width", 2);
+
+            node.append("text")
+                .attr("dy", "0.31em")
+                .attr("x", d => d.children ? -15 : 15)
+                .attr("text-anchor", d => d.children ? "end" : "start")
+                .text(d => d.data.name)
+                .attr("fill", getComputedStyle(document.body).color)
+                .on("click", (event, d) => {
+                    // Start in-place editing
+                    const currentText = d.data.name;
+                    const textEl = d3.select(event.target);
+                    const foreignObject = svg.append("foreignObject")
+                        .attr("x", d.y + (d.children ? -15 : 15))
+                        .attr("y", d.x - 10)
+                        .attr("width", 150)
+                        .attr("height", 25);
+
+                    const input = foreignObject.append("xhtml:input")
+                        .attr("type", "text")
+                        .attr("class", "bg-gray-200 dark:bg-gray-700 p-1 text-sm rounded-lg border-2 border-blue-400 dark:border-blue-600")
+                        .style("width", "100%")
+                        .attr("value", currentText)
+                        .on("keydown", (e) => {
+                            if (e.key === "Enter" || e.key === "Escape") {
+                                e.stopPropagation();
+                                d.data.name = input.node().value;
+                                textEl.text(d.data.name);
+                                foreignObject.remove();
+                            }
+                        });
+                    input.node().focus();
+                    input.node().select();
+                });
+
+            // Add plus button for children
+            const plusButton = node.append("g")
+                .attr("class", "plus-button cursor-pointer")
+                .attr("transform", d => `translate(${d.y + (d.children ? -15 : 15)}, ${d.x})`)
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    if (!d.data.children) {
+                        d.data.children = [];
+                    }
+                    d.data.children.push({ name: "Новый узел" });
+                    drawEditableTree();
+                });
+            
+            plusButton.append("circle")
+                .attr("r", 7)
+                .attr("fill", "#48bb78")
+                .attr("stroke", "white")
+                .attr("stroke-width", 1)
+                .attr("transform", `translate(0, 20)`);
+                
+            plusButton.append("text")
+                .attr("dy", "0.31em")
+                .attr("text-anchor", "middle")
+                .text("+")
+                .attr("fill", "white")
+                .attr("transform", `translate(0, 20)`);
+        }
+
+        // Event Listeners
+        tagInputEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && tagInputEl.value.trim() !== '') {
+                const newTag = tagInputEl.value.trim().toLowerCase();
+                addTag(newTag);
+                tagInputEl.value = '';
+            }
+        });
+
+        createPageButtonEl.addEventListener('click', () => {
+            showModal(
+                `<p>Введите название новой страницы:</p><input type="text" id="newPageTitleInput" class="w-full p-2 mt-2 rounded-lg bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600" />`,
+                [
+                    { text: "Отмена", className: "bg-gray-500 hover:bg-gray-600", handler: closeModal },
+                    { text: "Создать", handler: () => {
+                        const newTitle = document.getElementById('newPageTitleInput').value.trim();
+                        if (newTitle) {
+                            const newId = crypto.randomUUID();
+                            const newPage = {
+                                id: newId,
+                                title: newTitle,
+                                blocks: [{ type: 'text', id: crypto.randomUUID(), content: 'Содержимое новой страницы...' }],
+                                tags: [],
+                                parentId: currentPageId,
+                                childrenIds: []
+                            };
+
+                            pages[newId] = newPage;
+                            if (!pages[currentPageId].childrenIds) {
+                                pages[currentPageId].childrenIds = [];
+                            }
+                            pages[currentPageId].childrenIds.push(newId);
+                            saveData();
+                            renderPage(newId);
+                        }
+                        closeModal();
+                    }}
+                ]
+            );
+        });
+        
+        // Export with compression
+        localExportButtonEl.addEventListener('click', async () => {
+            if (!window.CompressionStream) {
+                showModal(
+                    `<p>Ваш браузер не поддерживает Compression Streams API. Локальный экспорт невозможен.</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+                return;
+            }
+            try {
+                const dataStr = JSON.stringify(pages);
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(new TextEncoder().encode(dataStr));
+                        controller.close();
+                    }
+                });
+                const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
+                const compressedBlob = await new Response(compressedStream).blob();
+
+                const url = URL.createObjectURL(compressedBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pages_export_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showModal(
+                    `<p>Данные успешно экспортированы и сжаты! Файл должен был скачаться.</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+            } catch (e) {
+                showModal(
+                    `<p>Не удалось экспортировать данные. Пожалуйста, попробуйте еще раз. Ошибка: ${e.message}</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+                console.error('Ошибка экспорта:', e);
+            }
+        });
+
+        localImportButtonEl.addEventListener('click', () => {
+            fileInputEl.click();
+        });
+
+        // Import with decompression
+        fileInputEl.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const compressedReadableStream = file.stream();
+                const decompressedStream = compressedReadableStream.pipeThrough(new DecompressionStream('gzip'));
+                const response = new Response(decompressedStream);
+                const text = await response.text();
+                
+                const importedData = JSON.parse(text);
+                if (typeof importedData === 'object' && importedData['root'] && importedData['root'].title) {
+                    pages = importedData;
+                    saveData();
+                    currentPageId = 'root';
+                    renderPage(currentPageId);
+                    showModal(
+                        `<p>Данные успешно импортированы!</p>`,
+                        [{ text: "ОК", handler: closeModal }]
+                    );
+                } else {
+                    showModal(
+                        `<p>Неверный формат файла. Пожалуйста, убедитесь, что это экспортированный файл JSON.</p>`,
+                        [{ text: "ОК", handler: closeModal }]
+                    );
+                }
+            } catch (e) {
+                showModal(
+                    `<p>Не удалось прочитать или распаковать файл. Пожалуйста, убедитесь, что это экспортированный файл JSON.</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+                console.error('Ошибка импорта:', e);
+            }
+        });
+        
+        // --- Google Drive Simulation Functions ---
+
+        exportToDriveButtonEl.addEventListener('click', () => {
+            // This is a simulation. Actual Google Drive API calls are not possible here.
+            showModal(
+                `
+                <h3 class="font-bold text-lg mb-2">Сохранение на Google Диск</h3>
+                <p class="mb-2">Из-за ограничений безопасности, прямой доступ к Google Диску невозможен в этой среде. Это окно имитирует процесс сохранения.</p>
+                <div class="flex items-center gap-2">
+                    <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Сохранение файла "pages_export.json"...</span>
+                </div>
+                `,
+                [{ text: "Отмена", className: "bg-gray-500 hover:bg-gray-600", handler: closeModal }]
+            );
+
+            setTimeout(() => {
+                showModal(
+                    `
+                    <h3 class="font-bold text-lg mb-2">Готово!</h3>
+                    <p>Файл "pages_export.json" успешно сохранен на Google Диск.</p>
+                    <p class="text-sm text-gray-500 mt-2"><i>(Это имитация, реальный файл не был сохранен.)</i></p>
+                    `,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+            }, 2000);
+        });
+
+        importFromDriveButtonEl.addEventListener('click', () => {
+            // This is a simulation. Actual Google Drive API calls are not possible here.
+            showModal(
+                `
+                <h3 class="font-bold text-lg mb-2">Загрузка с Google Диска</h3>
+                <p class="mb-2">Из-за ограничений безопасности, прямой доступ к Google Диску невозможен в этой среде. Это окно имитирует процесс загрузки.</p>
+                <p>Нажмите "Загрузить", чтобы имитировать выбор файла и его загрузку.</p>
+                `,
+                [
+                    { text: "Отмена", className: "bg-gray-500 hover:bg-gray-600", handler: closeModal },
+                    { text: "Загрузить", handler: () => {
+                        showModal(
+                            `
+                            <h3 class="font-bold text-lg mb-2">Загрузка...</h3>
+                            <div class="flex items-center gap-2">
+                                <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Загрузка данных из "pages_export.json"...</span>
+                            </div>
+                            `,
+                            []
+                        );
+                        // Simulate loading data and updating the app
+                        setTimeout(() => {
+                            // In a real app, you would fetch data from Google Drive here.
+                            const importedData = {
+                                'root': {
+                                    id: 'root',
+                                    title: 'Импортированная Главная страница',
+                                    blocks: [{ type: 'text', id: crypto.randomUUID(), content: 'Это данные, импортированные с Google Диска!' }],
+                                    tags: ["импорт", "диск"],
+                                    parentId: null,
+                                    childrenIds: []
+                                }
+                            };
+                            pages = importedData;
+                            saveData();
+                            currentPageId = 'root';
+                            renderPage(currentPageId);
+                            showModal(
+                                `
+                                <h3 class="font-bold text-lg mb-2">Готово!</h3>
+                                <p>Данные успешно загружены и импортированы.</p>
+                                <p class="text-sm text-gray-500 mt-2"><i>(Это имитация, были загружены тестовые данные.)</i></p>
+                                `,
+                                [{ text: "ОК", handler: closeModal }]
+                            );
+                        }, 2000);
+                    }}
+                ]
+            );
+        });
+
+        searchButtonEl.addEventListener('click', () => {
+            searchModalEl.classList.remove('hidden');
+            searchInputEl.focus();
+        });
+
+        closeSearchModalButtonEl.addEventListener('click', () => {
+            searchModalEl.classList.add('hidden');
+            searchInputEl.value = '';
+            searchResultsListEl.innerHTML = '';
+        });
+
+        searchInputEl.addEventListener('input', () => {
+            const results = searchPages(searchInputEl.value);
+            renderSearchResults(results);
+        });
+
+        saveSearchResultsButtonEl.addEventListener('click', () => {
+            const results = searchPages(searchInputEl.value);
+            if (results.length > 0) {
+                const newId = crypto.randomUUID();
+                const resultText = results.map(p => {
+                    const blockContents = p.blocks.map(b => {
+                        if (b.type === 'text') return b.content;
+                        if (b.type === 'table') return `Таблица: ${JSON.stringify(b.data)}`;
+                        if (b.type === 'graph') return `График: ${b.data.type}`;
+                        if (b.type === 'tree') return `Дерево: ${b.title}`;
+                        return '';
+                    }).join('\n\n');
+
+                    const textSummary = resultText.length > 200 ? resultText.substring(0, 200) + "..." : resultText;
+
+                    return `[${p.title}]\n${textSummary}`;
+                }).join('\n\n---\n\n');
+
+                const newPage = {
+                    id: newId,
+                    title: `Результаты поиска: "${searchInputEl.value}"`,
+                    blocks: [{ type: 'text', id: crypto.randomUUID(), content: resultText }],
+                    tags: [],
+                    parentId: currentPageId,
+                    childrenIds: []
+                };
+
+                pages[newId] = newPage;
+                if (!pages[currentPageId].childrenIds) {
+                     pages[currentPageId].childrenIds = [];
+                }
+                pages[currentPageId].childrenIds.push(newId);
+                saveData();
+                renderPage(newId);
+                searchModalEl.classList.add('hidden');
+                showModal(
+                    `<p>Результаты поиска сохранены как новая страница!</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+            } else {
+                showModal(
+                    `<p>Нет результатов для сохранения.</p>`,
+                    [{ text: "ОК", handler: closeModal }]
+                );
+            }
+        });
+        
+        // Add block buttons
+        addTextBlockButtonEl.addEventListener('click', () => {
+            const page = pages[currentPageId];
+            if (page) {
+                page.blocks.push({
+                    id: crypto.randomUUID(),
+                    type: 'text',
+                    content: 'Новый текстовый блок...'
+                });
+                saveData();
+                renderPage(currentPageId);
+            }
+        });
+        
+        addTableBlockButtonEl.addEventListener('click', () => {
+            const page = pages[currentPageId];
+            if (page) {
+                page.blocks.push({
+                    id: crypto.randomUUID(),
+                    type: 'table',
+                    data: [["Заголовок 1", "Заголовок 2", "Заголовок 3"], ["Данные 1", "Данные 2", "Данные 3"]]
+                });
+                saveData();
+                renderPage(currentPageId);
+            }
+        });
+
+        addGraphBlockButtonEl.addEventListener('click', () => {
+            const page = pages[currentPageId];
+            if (page) {
+                page.blocks.push({
+                    id: crypto.randomUUID(),
+                    type: 'graph',
+                    data: {
+                        type: 'bar',
+                        labels: ['Янв', 'Фев', 'Мар'],
+                        datasets: [{
+                            label: 'Продажи',
+                            data: [12, 19, 3],
+                            backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 159, 64, 0.5)'],
+                            borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)', 'rgba(255, 159, 64, 1)'],
+                            borderWidth: 1
+                        }]
+                    }
+                });
+                saveData();
+                renderPage(currentPageId);
+            }
+        });
+
+        addTreeBlockButtonEl.addEventListener('click', () => {
+            const page = pages[currentPageId];
+            if (page) {
+                page.blocks.push({
+                    id: crypto.randomUUID(),
+                    type: 'tree',
+                    title: 'Новое дерево',
+                    data: '{ "name": "Корень", "children": [] }'
+                });
+                saveData();
+                renderPage(currentPageId);
+            }
+        });
+        
+        // Save table button
+        saveTableButtonEl.addEventListener('click', () => {
+            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
+            if (block) {
+                const rows = Array.from(tableEditorContainerEl.querySelectorAll('tr'));
+                const newData = rows.map(row => {
+                    return Array.from(row.querySelectorAll('input')).map(input => input.value);
+                });
+                block.data = newData;
+                saveData();
+                renderPage(currentPageId);
+                tableEditorModalEl.classList.add('hidden');
+            }
+        });
+
+        addTableRowButtonEl.addEventListener('click', () => {
+            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
+            const data = block.data;
+            if (data && data[0]) {
+                const newRow = Array(data[0].length).fill("");
+                data.push(newRow);
+                renderTableEditor(data);
+            }
+        });
+
+        addTableColButtonEl.addEventListener('click', () => {
+            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
+            const data = block.data;
+            if (data && data[0]) {
+                data.forEach(row => row.push(""));
+                renderTableEditor(data);
+            }
+        });
+
+        // Save graph button
+        saveGraphButtonEl.addEventListener('click', () => {
+            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
+            if (block) {
+                const labels = graphLabelsInputEl.value.split(',').map(s => s.trim());
+                const values = graphValuesInputEl.value.split(',').map(s => parseFloat(s.trim()));
+                const type = graphTypeSelectEl.value;
+
+                block.data = {
+                    type: type,
+                    labels: labels,
+                    datasets: [{
+                        label: 'Данные',
+                        data: values,
+                        backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 159, 64, 0.5)', 'rgba(255, 99, 132, 0.5)', 'rgba(153, 102, 255, 0.5)', 'rgba(201, 203, 207, 0.5)', 'rgba(255, 205, 86, 0.5)'],
+                        borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)', 'rgba(255, 159, 64, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 102, 255, 1)', 'rgba(201, 203, 207, 1)', 'rgba(255, 205, 86, 1)'],
+                        borderWidth: 1
+                    }]
+                };
+
+                saveData();
+                renderPage(currentPageId);
+                graphEditorModalEl.classList.add('hidden');
+            }
+        });
+        
+        // Save tree button
+        saveTreeButtonEl.addEventListener('click', () => {
+            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
+            if (block) {
+                block.title = treeTitleInputEl.value;
+                block.data = JSON.stringify(currentTreeData);
+                saveData();
+                renderPage(currentPageId);
+                treeEditorModalEl.classList.add('hidden');
+            }
+        });
+
+        
+        // Initialization on page load
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

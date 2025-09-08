@@ -1,9 +1,7 @@
 const CACHE_NAME = 'page-manager-cache-v1';
 const urlsToCache = [
   './',
-  './advanced_page_manager.html',
   './manifest.json',
-  'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://d3js.org/d3.v7.min.js'
 ];

@@ -149,6 +149,74 @@
             <div id="modalButtons" class="mt-4 flex justify-end gap-2"></div>
         </div>
     </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Поиск</h3>
+                <button id="closeSearchModalButton" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <input id="searchInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600" placeholder="Введите запрос или #тег...">
+            <ul id="searchResultsList" class="flex flex-col gap-2 mb-4"></ul>
+            <button id="saveSearchResultsButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Сохранить результаты как страницу</button>
+        </div>
+    </div>
+
+    <!-- Table Editor Modal -->
+    <div id="tableEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
+            <h3 class="font-bold text-lg mb-4">Редактор таблицы</h3>
+            <div id="tableEditorContainer" class="mb-4"></div>
+            <div class="flex gap-2 mb-4">
+                <button id="addTableRowButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Добавить строку</button>
+                <button id="addTableColButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Добавить столбец</button>
+            </div>
+            <button id="saveTableButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Graph Editor Modal -->
+    <div id="graphEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
+            <h3 class="font-bold text-lg mb-4">Редактор графика</h3>
+            <div class="mb-4">
+                <label class="block mb-2">Тип графика:</label>
+                <select id="graphTypeSelect" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+                    <option value="bar">Bar</option>
+                    <option value="line">Line</option>
+                    <option value="pie">Pie</option>
+                    <option value="doughnut">Doughnut</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Метки (через запятую):</label>
+                <input id="graphLabelsInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+            </div>
+            <div class="mb-4">
+                <label class="block mb-2">Значения (через запятую):</label>
+                <input id="graphValuesInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+            </div>
+            <button id="saveGraphButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Tree Editor Modal -->
+    <div id="treeEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
+            <h3 class="font-bold text-lg mb-4">Редактор дерева</h3>
+            <div class="mb-4">
+                <label class="block mb-2">Заголовок дерева:</label>
+                <input id="treeTitleInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+            </div>
+            <div id="treeEditorContainer" class="mb-4"></div>
+            <button id="saveTreeButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
+        </div>
+    </div>
     
     <script>
         // Global variables
@@ -1090,179 +1158,4 @@
                         return '';
                     }).join('\n\n');
 
-                    const textSummary = resultText.length > 200 ? resultText.substring(0, 200) + "..." : resultText;
-
-                    return `[${p.title}]\n${textSummary}`;
-                }).join('\n\n---\n\n');
-
-                const newPage = {
-                    id: newId,
-                    title: `Результаты поиска: "${searchInputEl.value}"`,
-                    blocks: [{ type: 'text', id: crypto.randomUUID(), content: resultText }],
-                    tags: [],
-                    parentId: currentPageId,
-                    childrenIds: []
-                };
-
-                pages[newId] = newPage;
-                if (!pages[currentPageId].childrenIds) {
-                     pages[currentPageId].childrenIds = [];
-                }
-                pages[currentPageId].childrenIds.push(newId);
-                saveData();
-                renderPage(newId);
-                searchModalEl.classList.add('hidden');
-                showModal(
-                    `<p>Результаты поиска сохранены как новая страница!</p>`,
-                    [{ text: "ОК", handler: closeModal }]
-                );
-            } else {
-                showModal(
-                    `<p>Нет результатов для сохранения.</p>`,
-                    [{ text: "ОК", handler: closeModal }]
-                );
-            }
-        });
-        
-        // Add block buttons
-        addTextBlockButtonEl.addEventListener('click', () => {
-            const page = pages[currentPageId];
-            if (page) {
-                page.blocks.push({
-                    id: crypto.randomUUID(),
-                    type: 'text',
-                    content: 'Новый текстовый блок...'
-                });
-                saveData();
-                renderPage(currentPageId);
-            }
-        });
-        
-        addTableBlockButtonEl.addEventListener('click', () => {
-            const page = pages[currentPageId];
-            if (page) {
-                page.blocks.push({
-                    id: crypto.randomUUID(),
-                    type: 'table',
-                    data: [["Заголовок 1", "Заголовок 2", "Заголовок 3"], ["Данные 1", "Данные 2", "Данные 3"]]
-                });
-                saveData();
-                renderPage(currentPageId);
-            }
-        });
-
-        addGraphBlockButtonEl.addEventListener('click', () => {
-            const page = pages[currentPageId];
-            if (page) {
-                page.blocks.push({
-                    id: crypto.randomUUID(),
-                    type: 'graph',
-                    data: {
-                        type: 'bar',
-                        labels: ['Янв', 'Фев', 'Мар'],
-                        datasets: [{
-                            label: 'Продажи',
-                            data: [12, 19, 3],
-                            backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 159, 64, 0.5)'],
-                            borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)', 'rgba(255, 159, 64, 1)'],
-                            borderWidth: 1
-                        }]
-                    }
-                });
-                saveData();
-                renderPage(currentPageId);
-            }
-        });
-
-        addTreeBlockButtonEl.addEventListener('click', () => {
-            const page = pages[currentPageId];
-            if (page) {
-                page.blocks.push({
-                    id: crypto.randomUUID(),
-                    type: 'tree',
-                    title: 'Новое дерево',
-                    data: '{ "name": "Корень", "children": [] }'
-                });
-                saveData();
-                renderPage(currentPageId);
-            }
-        });
-        
-        // Save table button
-        saveTableButtonEl.addEventListener('click', () => {
-            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
-            if (block) {
-                const rows = Array.from(tableEditorContainerEl.querySelectorAll('tr'));
-                const newData = rows.map(row => {
-                    return Array.from(row.querySelectorAll('input')).map(input => input.value);
-                });
-                block.data = newData;
-                saveData();
-                renderPage(currentPageId);
-                tableEditorModalEl.classList.add('hidden');
-            }
-        });
-
-        addTableRowButtonEl.addEventListener('click', () => {
-            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
-            const data = block.data;
-            if (data && data[0]) {
-                const newRow = Array(data[0].length).fill("");
-                data.push(newRow);
-                renderTableEditor(data);
-            }
-        });
-
-        addTableColButtonEl.addEventListener('click', () => {
-            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
-            const data = block.data;
-            if (data && data[0]) {
-                data.forEach(row => row.push(""));
-                renderTableEditor(data);
-            }
-        });
-
-        // Save graph button
-        saveGraphButtonEl.addEventListener('click', () => {
-            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
-            if (block) {
-                const labels = graphLabelsInputEl.value.split(',').map(s => s.trim());
-                const values = graphValuesInputEl.value.split(',').map(s => parseFloat(s.trim()));
-                const type = graphTypeSelectEl.value;
-
-                block.data = {
-                    type: type,
-                    labels: labels,
-                    datasets: [{
-                        label: 'Данные',
-                        data: values,
-                        backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(255, 159, 64, 0.5)', 'rgba(255, 99, 132, 0.5)', 'rgba(153, 102, 255, 0.5)', 'rgba(201, 203, 207, 0.5)', 'rgba(255, 205, 86, 0.5)'],
-                        borderColor: ['rgba(54, 162, 235, 1)', 'rgba(75, 192, 192, 1)', 'rgba(255, 159, 64, 1)', 'rgba(255, 99, 132, 1)', 'rgba(153, 102, 255, 1)', 'rgba(201, 203, 207, 1)', 'rgba(255, 205, 86, 1)'],
-                        borderWidth: 1
-                    }]
-                };
-
-                saveData();
-                renderPage(currentPageId);
-                graphEditorModalEl.classList.add('hidden');
-            }
-        });
-        
-        // Save tree button
-        saveTreeButtonEl.addEventListener('click', () => {
-            const block = pages[currentPageId].blocks.find(b => b.id === currentEditingBlockId);
-            if (block) {
-                block.title = treeTitleInputEl.value;
-                block.data = JSON.stringify(currentTreeData);
-                saveData();
-                renderPage(currentPageId);
-                treeEditorModalEl.classList.add('hidden');
-            }
-        });
-
-        
-        // Initialization on page load
-        window.onload = initializeApp;
-    </script>
-</body>
-</html>
+               

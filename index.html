@@ -213,7 +213,7 @@
                 <button id="importFromDriveButton" class="button button-purple">Загрузить с Google Диска</button>
             </div>
         </div>
-        <div class="main">
+        <div class="main" id="mainBlock" style="display:none;">
             <div id="blocksContainer"></div>
             <div>
                 <button id="addTextBlockButton" class="button">Добавить текст</button>
@@ -225,7 +225,7 @@
                 <input type="text" id="tagInput" class="input" placeholder="Добавить тег и нажать Enter">
             </div>
         </div>
-        <div>
+        <div id="subpagesBlock" style="display:none;">
             <h2>Подстраницы</h2>
             <ul id="subpagesList" class="subpages-list"></ul>
         </div>
@@ -745,6 +745,8 @@
                 li.textContent = 'Нет подстраниц. Нажмите "Создать", чтобы добавить.';
                 subpagesListEl.appendChild(li);
             }
+
+            showMainBlocks(true);
         }
         
         // Delete a page

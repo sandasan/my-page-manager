@@ -136,48 +136,65 @@
             justify-content: center;
             z-index: 1000;
         }
-        .modal-content {
+        .modal-window {
             background: #fff;
-            border-radius: 8px;
-            padding: 32px;
+            border-radius: 10px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+            padding: 32px 28px;
             min-width: 320px;
-            max-width: 500px;
+            max-width: 480px;
+            margin: 0 auto;
         }
-        .modal-buttons {
-            margin-top: 24px;
-            text-align: right;
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 18px;
         }
-        .input {
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .modal-label {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .modal-input, .modal-select {
             padding: 8px;
             border-radius: 6px;
             border: 1px solid #e2e8f0;
+            font-size: 1rem;
             width: 100%;
-            margin-bottom: 8px;
         }
-        .controls {
+        .modal-actions {
             display: flex;
             gap: 10px;
-            margin-left: 20px;
+            margin-top: 18px;
+            justify-content: flex-end;
         }
-        .controls .button {
-            min-width: 110px;
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            background: #e2e8f0;
+            color: #222;
+            cursor: pointer;
             font-size: 1rem;
-            padding: 7px 14px;
-            margin-right: 0;
         }
-        .header {
-            align-items: flex-start;
+        .modal-btn-primary { background: #0063f1; color: #fff; }
+        .modal-btn-success { background: #38a169; color: #fff; }
+        .modal-btn-warning { background: #ecc94b; color: #222; }
+        .modal-btn-danger { background: #e53e3e; color: #fff; }
+        .modal-btn:active { filter: brightness(0.95); }
+        .modal-row {
+            display: flex;
+            gap: 10px;
         }
-        @media (max-width: 700px) {
-            .controls {
-                flex-wrap: wrap;
-                gap: 6px;
-                margin-left: 0;
-                margin-top: 10px;
-            }
-            .header {
-                flex-direction: column;
-                gap: 10px;
+        @media (max-width: 600px) {
+            .modal-window {
+                padding: 18px 8px;
+                min-width: 0;
+                max-width: 98vw;
             }
         }
     </style>
@@ -226,70 +243,70 @@
     </div>
 
     <!-- Search Modal -->
-    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">Поиск</h3>
-                <button id="closeSearchModalButton" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+    <div id="searchModal" class="modal" style="display:none">
+        <div class="modal-window">
+            <div class="modal-title">Поиск</div>
+            <form class="modal-form" onsubmit="return false;">
+                <input id="searchInput" type="text" class="modal-input" placeholder="Введите запрос или #тег...">
+                <ul id="searchResultsList"></ul>
+            </form>
+            <div class="modal-actions">
+                <button id="saveSearchResultsButton" class="modal-btn modal-btn-primary">Сохранить результаты как страницу</button>
+                <button id="closeSearchModalButton" class="modal-btn">Закрыть</button>
             </div>
-            <input id="searchInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600" placeholder="Введите запрос или #тег...">
-            <ul id="searchResultsList" class="flex flex-col gap-2 mb-4"></ul>
-            <button id="saveSearchResultsButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Сохранить результаты как страницу</button>
         </div>
     </div>
 
     <!-- Table Editor Modal -->
-    <div id="tableEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
-            <h3 class="font-bold text-lg mb-4">Редактор таблицы</h3>
-            <div id="tableEditorContainer" class="mb-4"></div>
-            <div class="flex gap-2 mb-4">
-                <button id="addTableRowButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Добавить строку</button>
-                <button id="addTableColButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Добавить столбец</button>
+    <div id="tableEditorModal" class="modal" style="display:none">
+        <div class="modal-window">
+            <div class="modal-title">Редактор таблицы</div>
+            <div id="tableEditorContainer" style="margin-bottom:14px;"></div>
+            <div class="modal-row">
+                <button id="addTableRowButton" class="modal-btn">Добавить строку</button>
+                <button id="addTableColButton" class="modal-btn">Добавить столбец</button>
             </div>
-            <button id="saveTableButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
+            <div class="modal-actions">
+                <button id="saveTableButton" class="modal-btn modal-btn-primary">Сохранить</button>
+            </div>
         </div>
     </div>
 
     <!-- Graph Editor Modal -->
-    <div id="graphEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
-            <h3 class="font-bold text-lg mb-4">Редактор графика</h3>
-            <div class="mb-4">
-                <label class="block mb-2">Тип графика:</label>
-                <select id="graphTypeSelect" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+    <div id="graphEditorModal" class="modal" style="display:none">
+        <div class="modal-window">
+            <div class="modal-title">Редактор графика</div>
+            <form class="modal-form" onsubmit="return false;">
+                <label class="modal-label">Тип графика:</label>
+                <select id="graphTypeSelect" class="modal-select">
                     <option value="bar">Bar</option>
                     <option value="line">Line</option>
                     <option value="pie">Pie</option>
                     <option value="doughnut">Doughnut</option>
                 </select>
+                <label class="modal-label">Метки (через запятую):</label>
+                <input id="graphLabelsInput" type="text" class="modal-input">
+                <label class="modal-label">Значения (через запятую):</label>
+                <input id="graphValuesInput" type="text" class="modal-input">
+            </form>
+            <div class="modal-actions">
+                <button id="saveGraphButton" class="modal-btn modal-btn-primary">Сохранить</button>
             </div>
-            <div class="mb-4">
-                <label class="block mb-2">Метки (через запятую):</label>
-                <input id="graphLabelsInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-            </div>
-            <div class="mb-4">
-                <label class="block mb-2">Значения (через запятую):</label>
-                <input id="graphValuesInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-            </div>
-            <button id="saveGraphButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
         </div>
     </div>
 
     <!-- Tree Editor Modal -->
-    <div id="treeEditorModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-xl">
-            <h3 class="font-bold text-lg mb-4">Редактор дерева</h3>
-            <div class="mb-4">
-                <label class="block mb-2">Заголовок дерева:</label>
-                <input id="treeTitleInput" type="text" class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+    <div id="treeEditorModal" class="modal" style="display:none">
+        <div class="modal-window">
+            <div class="modal-title">Редактор дерева</div>
+            <form class="modal-form" onsubmit="return false;">
+                <label class="modal-label">Заголовок дерева:</label>
+                <input id="treeTitleInput" type="text" class="modal-input">
+            </form>
+            <div id="treeEditorContainer" style="margin-bottom:14px;"></div>
+            <div class="modal-actions">
+                <button id="saveTreeButton" class="modal-btn modal-btn-primary">Сохранить</button>
             </div>
-            <div id="treeEditorContainer" class="mb-4"></div>
-            <button id="saveTreeButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600">Сохранить</button>
         </div>
     </div>
     

@@ -386,6 +386,12 @@
             modalContainerEl.classList.add('hidden');
         }
 
+        // Управление видимостью основных блоков
+        function showMainBlocks(show) {
+            document.getElementById('mainBlock').style.display = show ? '' : 'none';
+            document.getElementById('subpagesBlock').style.display = show ? '' : 'none';
+        }
+
         // Initialization
         function initializeApp() {
             try {

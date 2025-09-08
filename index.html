@@ -37,6 +37,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
+            align-items: flex-start;
         }
         .header-title {
             font-size: 2rem;
@@ -153,6 +154,32 @@
             width: 100%;
             margin-bottom: 8px;
         }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+        }
+        .controls .button {
+            min-width: 110px;
+            font-size: 1rem;
+            padding: 7px 14px;
+            margin-right: 0;
+        }
+        .header {
+            align-items: flex-start;
+        }
+        @media (max-width: 700px) {
+            .controls {
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-left: 0;
+                margin-top: 10px;
+            }
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -160,7 +187,7 @@
         <div class="header">
             <button id="backButton" class="button">Назад</button>
             <span id="pageTitle" class="header-title">Загрузка...</span>
-            <div>
+            <div class="controls">
                 <button id="searchButton" class="button button-primary">Поиск</button>
                 <button id="createPageButton" class="button button-primary">Создать</button>
                 <button id="localExportButton" class="button button-success">Экспорт (Локально)</button>

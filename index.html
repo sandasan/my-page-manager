@@ -797,7 +797,7 @@
                 graphLabelsInputEl.value = '';
                 graphValuesInputEl.value = '';
             }
-            graphEditorModalEl.classList.add('hidden');
+            graphEditorModalEl.classList.remove('hidden');
         }
 
         // Tree editor functions
@@ -1157,5 +1157,27 @@
                         if (b.type === 'tree') return `Дерево: ${b.title}`;
                         return '';
                     }).join('\n\n');
+                    return `# ${p.title}\n\n${blockContents}`;
+                }).join('\n\n---\n\n');
 
-               
+                const newPage = {
+                    id: newId,
+                    title: `Результаты поиска: ${searchInputEl.value}`,
+                    blocks: [{ type: 'text', id: crypto.randomUUID(), content: resultText }],
+                    tags: [],
+                    parentId: null,
+                    childrenIds: []
+                };
+
+                pages[newId] = newPage;
+                saveData();
+                renderPage(newId);
+            }
+        });
+
+        // Initial setup
+        initializeApp();
+    </script>
+</body>
+</html>
+

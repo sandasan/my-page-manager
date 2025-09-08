@@ -16,37 +16,89 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            background: #f5f5f5;
+            color: #222;
         }
-        /* Style for tags */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .header-title {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            background: #e2e8f0;
+            color: #222;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        .button:last-child { margin-right: 0; }
+        .button-primary { background: #0063f1; color: #fff; }
+        .button-success { background: #38a169; color: #fff; }
+        .button-warning { background: #ecc94b; color: #222; }
+        .button-orange { background: #ed8936; color: #fff; }
+        .button-purple { background: #805ad5; color: #fff; }
+        .button-danger { background: #e53e3e; color: #fff; }
+        .main {
+            margin-bottom: 24px;
+        }
+        .block {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .block .delete-block-button {
+            float: right;
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+        }
+        .block .edit-block-button {
+            float: right;
+            background: #3182ce;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
         .tag {
-            background-color: #e2e8f0;
+            background: #e2e8f0;
             color: #4a5568;
             padding: 2px 8px;
             border-radius: 9999px;
             font-size: 0.875rem;
             cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
-            white-space: nowrap;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            display: inline-block;
         }
-        .tag:hover {
-            background-color: #cbd5e0;
-        }
-        .dark .tag {
-            background-color: #2d3748;
-            color: #e2e8f0;
-        }
-        .dark .tag:hover {
-            background-color: #4a5568;
-        }
-        /* Table styles */
         .custom-table {
             width: 100%;
             border-collapse: collapse;
@@ -58,95 +110,91 @@
             padding: 8px;
             text-align: left;
         }
-        .dark .custom-table th, .dark .custom-table td {
-            border-color: #4a5568;
+        .subpages-list {
+            list-style: none;
+            padding: 0;
         }
-        .custom-table th {
-            background-color: #f7fafc;
-        }
-        .dark .custom-table th {
-            background-color: #2d3748;
-        }
-        [contenteditable]:focus {
-            outline: none;
-            ring: 2px solid #63b3ed;
-        }
-        .tree-container svg {
-            background-color: #f7fafc;
-            border-radius: 0.5rem;
-        }
-        .dark .tree-container svg {
-            background-color: #1a202c;
-        }
-        .tree-node-editor {
-            border: 1px solid #e2e8f0;
-            border-radius: 0.5rem;
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
+        .subpage-item {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
             display: flex;
-            gap: 0.5rem;
             align-items: center;
+            justify-content: space-between;
         }
-        .tree-node-editor input {
-            flex-grow: 1;
-            background-color: transparent;
-            outline: none;
+        .subpage-title {
+            font-weight: 500;
+        }
+        .modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            padding: 32px;
+            min-width: 320px;
+            max-width: 500px;
+        }
+        .modal-buttons {
+            margin-top: 24px;
+            text-align: right;
+        }
+        .input {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            width: 100%;
+            margin-bottom: 8px;
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col min-h-screen">
-    <div id="app" class="flex flex-col flex-grow w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-        <!-- Header -->
-        <header class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6 flex items-center justify-between flex-wrap gap-4">
-            <div class="flex items-center gap-2 flex-grow">
-                <button id="backButton" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors duration-200 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                    </svg>
-                </button>
-                <h1 id="pageTitle" class="text-2xl font-bold flex-grow text-center sm:text-left truncate">Загрузка...</h1>
+<body>
+    <div class="container">
+        <div class="header">
+            <button id="backButton" class="button">Назад</button>
+            <span id="pageTitle" class="header-title">Загрузка...</span>
+            <div>
+                <button id="searchButton" class="button button-primary">Поиск</button>
+                <button id="createPageButton" class="button button-primary">Создать</button>
+                <button id="localExportButton" class="button button-success">Экспорт (Локально)</button>
+                <button id="localImportButton" class="button button-warning">Импорт (Локально)</button>
+                <button id="exportToDriveButton" class="button button-orange">Сохранить на Google Диск</button>
+                <button id="importFromDriveButton" class="button button-purple">Загрузить с Google Диска</button>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <button id="searchButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Поиск</button>
-                <button id="createPageButton" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-200">Создать</button>
-                <button id="localExportButton" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition-colors duration-200">Экспорт (Локально)</button>
-                <button id="localImportButton" class="px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600 transition-colors duration-200">Импорт (Локально)</button>
-                <button id="exportToDriveButton" class="px-4 py-2 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 transition-colors duration-200">Сохранить на Google Диск</button>
-                <button id="importFromDriveButton" class="px-4 py-2 bg-purple-500 text-white rounded-lg shadow-md hover:bg-purple-600 transition-colors duration-200">Загрузить с Google Диска</button>
+        </div>
+        <div class="main">
+            <div id="blocksContainer"></div>
+            <div>
+                <button id="addTextBlockButton" class="button">Добавить текст</button>
+                <button id="addTableBlockButton" class="button">Добавить таблицу</button>
+                <button id="addGraphBlockButton" class="button">Добавить график</button>
+                <button id="addTreeBlockButton" class="button">Добавить дерево</button>
             </div>
-        </header>
-
-        <!-- Main content area -->
-        <main class="flex-grow bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-6">
-            <div id="blocksContainer" class="space-y-6">
-                <!-- Content blocks will be dynamically added here -->
+            <div id="tagContainer">
+                <input type="text" id="tagInput" class="input" placeholder="Добавить тег и нажать Enter">
             </div>
-            <div class="flex flex-wrap gap-2 mt-6 justify-center">
-                <button id="addTextBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить текст</button>
-                <button id="addTableBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить таблицу</button>
-                <button id="addGraphBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить график</button>
-                <button id="addTreeBlockButton" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200">Добавить дерево</button>
-            </div>
-            <div id="tagContainer" class="flex flex-wrap gap-2 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <input type="text" id="tagInput" class="flex-grow bg-gray-100 dark:bg-gray-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600" placeholder="Добавить тег и нажать Enter">
-            </div>
-        </main>
-
-        <!-- Subpages list -->
-        <div id="subpagesContainer" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-3">Подстраницы</h2>
-            <ul id="subpagesList" class="flex flex-col gap-2"></ul>
+        </div>
+        <div>
+            <h2>Подстраницы</h2>
+            <ul id="subpagesList" class="subpages-list"></ul>
         </div>
     </div>
     
     <!-- Hidden file input for import -->
-    <input type="file" id="fileInput" accept=".json" class="hidden">
+    <input type="file" id="fileInput" accept=".json" style="display:none">
 
     <!-- Modals -->
-    <div id="modalContainer" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-50">
-        <div id="modal" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl transform transition-transform scale-95 duration-200">
+    <div id="modalContainer" class="modal" style="display:none">
+        <div id="modal" class="modal-content">
             <div id="modalContent"></div>
-            <div id="modalButtons" class="mt-4 flex justify-end gap-2"></div>
+            <div id="modalButtons" class="modal-buttons"></div>
         </div>
     </div>
 
@@ -381,10 +429,10 @@
         // Render functions for different block types
         function renderTextBlock(block, index) {
             const blockEl = document.createElement('div');
-            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg flex flex-col gap-2 relative group';
+            blockEl.className = 'block';
             blockEl.innerHTML = `
                 <div contenteditable="true" class="page-content outline-none ring-2 ring-transparent focus:ring-blue-400 dark:focus:ring-blue-600 transition-shadow duration-200 p-2 rounded-lg cursor-text" data-block-id="${block.id}"></div>
-                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                <button class="delete-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
                     </svg>
@@ -402,15 +450,15 @@
 
         function renderTableBlock(block, index) {
             const blockEl = document.createElement('div');
-            blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg flex flex-col gap-2 relative group';
+            blockEl.className = 'block';
             blockEl.innerHTML = `
                 <table class="custom-table" data-block-id="${block.id}"></table>
-                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                <button class="edit-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
                     </svg>
                 </button>
-                <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                <button class="delete-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
                     </svg>
@@ -436,12 +484,12 @@
             blockEl.className = 'bg-gray-100 dark:bg-gray-700 p-4 rounded-lg relative group';
             blockEl.innerHTML = `
                 <canvas data-block-id="${block.id}" class="w-full h-64"></canvas>
-                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                <button class="edit-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
                     </svg>
                 </button>
-                 <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                 <button class="delete-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
                     </svg>
@@ -475,12 +523,12 @@
             blockEl.innerHTML = `
                 <h4 class="font-bold text-lg mb-2">${block.title}</h4>
                 <div class="tree-content w-full overflow-x-auto" data-block-id="${block.id}"></div>
-                <button class="absolute top-2 right-2 p-1 text-gray-500 hover:text-blue-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 edit-block-button">
+                <button class="edit-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6h4.5" />
                     </svg>
                 </button>
-                <button class="absolute top-2 right-9 p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded-full opacity-0 group-hover:opacity-100 delete-block-button">
+                <button class="delete-block-button">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.679-.114 1.022-.165m-1.022.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.942a2.25 2.25 0 01-2.244-2.077L4.772 5.79" />
                     </svg>
